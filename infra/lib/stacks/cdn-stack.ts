@@ -2,11 +2,16 @@ import * as cdk from 'aws-cdk-lib';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
+import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import { Construct } from 'constructs';
 
 interface CdnStackProps extends cdk.StackProps {
   processedBucketArn: string;
   frontendBucketArn: string;
+  /** ACM cert ARN for cloudclips.sokech.com (us-east-1). From CertStack. */
+  frontendCertificateArn: string;
+  /** Alternate domain to attach to the frontend distribution. */
+  frontendDomain: string;
 }
 
 export class CdnStack extends cdk.Stack {
@@ -41,14 +46,36 @@ export class CdnStack extends cdk.Stack {
       },
     });
 
+    // HSTS response headers policy — tells browsers to always use HTTPS for this
+    // domain for the next year, eliminating the HTTP→HTTPS redirect round-trip.
+    const hstsPolicy = new cloudfront.ResponseHeadersPolicy(this, 'HstsPolicy', {
+      responseHeadersPolicyName: 'cloudclips-hsts',
+      securityHeadersBehavior: {
+        strictTransportSecurity: {
+          accessControlMaxAge: cdk.Duration.days(365),
+          includeSubdomains: true,
+          override: true,
+        },
+      },
+    });
+
+    const frontendCert = acm.Certificate.fromCertificateArn(
+      this,
+      'FrontendCert',
+      props.frontendCertificateArn,
+    );
+
     // Frontend CDN — serves React SPA from frontend bucket
     this.frontendDistribution = new cloudfront.Distribution(this, 'FrontendDistribution', {
       comment: 'CloudClips - Frontend',
+      domainNames: [props.frontendDomain],
+      certificate: frontendCert,
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(frontendBucket),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
         allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+        responseHeadersPolicy: hstsPolicy,
       },
       defaultRootObject: 'index.html',
       errorResponses: [

@@ -9,6 +9,8 @@ import { ModerationStack } from '../lib/stacks/moderation-stack';
 import { ApiStack } from '../lib/stacks/api-stack';
 import { NotificationStack } from '../lib/stacks/notification-stack';
 import { CdnStack } from '../lib/stacks/cdn-stack';
+import { CertStack } from '../lib/stacks/cert-stack';
+import { DnsStack } from '../lib/stacks/dns-stack';
 
 const app = new cdk.App();
 
@@ -55,11 +57,24 @@ new ApiStack(app, `${prefix}-Api`, {
   videosTable: databaseStack.videosTable,
 });
 
-// CDN (uses bucket ARNs to avoid circular cross-stack references)
-new CdnStack(app, `${prefix}-Cdn`, {
+// Cert — provisions ACM cert for cloudclips.sokech.com via Cloudflare DNS validation.
+// Prerequisite: run scripts/setup-dns.sh once to store the Cloudflare API token in
+// AWS Secrets Manager before deploying for the first time.
+const certStack = new CertStack(app, `${prefix}-Cert`, { env });
+
+// CDN — cert and domain are declared in CDK so future updates never lose them.
+const cdnStack = new CdnStack(app, `${prefix}-Cdn`, {
   env,
   processedBucketArn: storageStack.processedBucket.bucketArn,
   frontendBucketArn: storageStack.frontendBucket.bucketArn,
+  frontendCertificateArn: certStack.certificateArn,
+  frontendDomain: 'cloudclips.sokech.com',
+});
+
+// DNS — upserts Cloudflare CNAME cloudclips.sokech.com → CloudFront on every deploy.
+new DnsStack(app, `${prefix}-Dns`, {
+  env,
+  distributionDomainName: cdnStack.frontendDistribution.distributionDomainName,
 });
 
 app.synth();
