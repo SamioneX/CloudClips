@@ -1,7 +1,18 @@
-/**
- * API service for CloudClips backend.
- * Base URL will be set from environment/Amplify config.
- */
+/** Matches backend/src/shared/types.ts VideoRecord */
+export interface VideoRecord {
+  videoId: string;
+  userId: string;
+  status: 'UPLOADING' | 'PROCESSING' | 'MODERATING' | 'PUBLISHED' | 'QUARANTINED';
+  title: string;
+  description?: string;
+  uploadKey: string;
+  processedKeys?: Record<string, string>; // { '720p': 'videos/.../_720p.mp4', '360p': '...' }
+  captionKey?: string;
+  moderationLabels?: Array<{ name: string; parentName?: string; confidence: number }>;
+  viewCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '';
 
@@ -19,7 +30,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     throw new Error(error.error ?? `HTTP ${response.status}`);
   }
 
-  return response.json();
+  return response.json() as Promise<T>;
 }
 
 export const api = {
@@ -27,17 +38,17 @@ export const api = {
   listVideos: (limit = 20, nextToken?: string) => {
     const params = new URLSearchParams({ limit: String(limit) });
     if (nextToken) params.set('nextToken', nextToken);
-    return request<{ videos: unknown[]; nextToken?: string }>(`/videos?${params}`);
+    return request<{ videos: VideoRecord[]; nextToken?: string }>(`videos?${params}`);
   },
 
   /** Get single video metadata */
-  getVideo: (videoId: string) => request<unknown>(`/videos/${videoId}`),
+  getVideo: (videoId: string) => request<VideoRecord>(`videos/${videoId}`),
 
-  /** Request a presigned upload URL */
+  /** Request a presigned upload URL (token = Cognito IdToken, no Bearer prefix) */
   createUpload: (title: string, contentType: string, token: string) =>
-    request<{ videoId: string; uploadUrl: string; expiresIn: number }>('/uploads', {
+    request<{ videoId: string; uploadUrl: string; expiresIn: number }>('uploads', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: token },
       body: JSON.stringify({ title, contentType, fileExtension: 'mp4' }),
     }),
 };

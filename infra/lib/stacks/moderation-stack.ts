@@ -31,6 +31,8 @@ export class ModerationStack extends cdk.Stack {
     const rekognitionCallbackTopic = new sns.Topic(this, 'RekognitionCallbackTopic', {
       topicName: 'cloudclips-rekognition-callback',
     });
+    // Rekognition uses rekognitionRole to publish the job completion notification
+    rekognitionCallbackTopic.grantPublish(rekognitionRole);
 
     // Lambda: Start Rekognition content moderation (triggered by processing topic)
     const moderateFn = new NodejsFunction(this, 'ModerateFn', {
@@ -41,14 +43,18 @@ export class ModerationStack extends cdk.Stack {
       timeout: cdk.Duration.minutes(1),
       environment: {
         VIDEOS_TABLE: props.videosTable.tableName,
+        UPLOAD_BUCKET: props.uploadBucket.bucketName,
         REKOGNITION_ROLE_ARN: rekognitionRole.roleArn,
         REKOGNITION_CALLBACK_TOPIC_ARN: rekognitionCallbackTopic.topicArn,
       },
     });
     props.videosTable.grantReadWriteData(moderateFn);
+    // Rekognition accesses S3 on behalf of the calling Lambda's role,
+    // so the Lambda itself (not just the rekognitionRole) needs s3:GetObject.
+    props.uploadBucket.grantRead(moderateFn);
     moderateFn.addToRolePolicy(
       new iam.PolicyStatement({
-        actions: ['rekognition:StartContentModerationDetection'],
+        actions: ['rekognition:StartContentModeration'],
         resources: ['*'],
       }),
     );
@@ -90,7 +96,7 @@ export class ModerationStack extends cdk.Stack {
     props.processingTopic.grantPublish(moderationCompleteFn);
     moderationCompleteFn.addToRolePolicy(
       new iam.PolicyStatement({
-        actions: ['rekognition:GetContentModerationDetection'],
+        actions: ['rekognition:GetContentModeration'],
         resources: ['*'],
       }),
     );

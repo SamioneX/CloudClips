@@ -68,8 +68,16 @@ export class CdnStack extends cdk.Stack {
     });
 
     // Outputs
+    new cdk.CfnOutput(this, 'VideoDistributionId', {
+      value: this.videoDistribution.distributionId,
+      description: 'CloudFront distribution ID for transcoded videos',
+    });
     new cdk.CfnOutput(this, 'VideoDistributionUrl', {
       value: `https://${this.videoDistribution.distributionDomainName}`,
+    });
+    new cdk.CfnOutput(this, 'FrontendDistributionId', {
+      value: this.frontendDistribution.distributionId,
+      description: 'CloudFront distribution ID for the React SPA',
     });
     new cdk.CfnOutput(this, 'FrontendDistributionUrl', {
       value: `https://${this.frontendDistribution.distributionDomainName}`,

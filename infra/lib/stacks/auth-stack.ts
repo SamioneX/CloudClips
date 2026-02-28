@@ -32,6 +32,10 @@ export class AuthStack extends cdk.Stack {
       userPoolClientName: 'cloudclips-web',
       authFlows: {
         userSrp: true,
+        // ADMIN_USER_PASSWORD_AUTH: server-side flow usable only with IAM credentials.
+        // Enabled so the test-upload.sh script can auth without an SRP implementation.
+        // Safe to leave on — browsers/mobile cannot call this without AWS credentials.
+        adminUserPassword: true,
       },
       preventUserExistenceErrors: true,
     });
