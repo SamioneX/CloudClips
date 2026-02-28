@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+cdk.out/
+*.js
+*.d.ts
+*.js.map
+!jest.config.js
+!vite.config.ts
+!.eslintrc.cjs
+!frontend/src/vite-env.d.ts
+
+# CDK
+cdk.context.json
+
+# Environment
+.env
+.env.*
+!.env.example
+.devcontainer/.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
