@@ -69,6 +69,19 @@ export class ApiStack extends cdk.Stack {
     });
     props.videosTable.grantReadData(getVideoFn);
 
+    // --- Lambda: Record a video view ---
+    const recordViewFn = new NodejsFunction(this, 'RecordViewFn', {
+      functionName: 'cloudclips-record-view',
+      entry: path.join(__dirname, '../../../backend/src/functions/record-view/handler.ts'),
+      handler: 'handler',
+      runtime: lambda.Runtime.NODEJS_20_X,
+      timeout: cdk.Duration.seconds(10),
+      environment: {
+        VIDEOS_TABLE: props.videosTable.tableName,
+      },
+    });
+    props.videosTable.grantReadWriteData(recordViewFn);
+
     // --- Lambda: List/feed videos ---
     const listVideosFn = new NodejsFunction(this, 'ListVideosFn', {
       functionName: 'cloudclips-list-videos',
@@ -99,6 +112,10 @@ export class ApiStack extends cdk.Stack {
     // GET /videos/{videoId} → single video
     const videoResource = videosResource.addResource('{videoId}');
     videoResource.addMethod('GET', new apigateway.LambdaIntegration(getVideoFn));
+
+    // POST /videos/{videoId}/view → increment view count (public)
+    const viewResource = videoResource.addResource('view');
+    viewResource.addMethod('POST', new apigateway.LambdaIntegration(recordViewFn));
 
     // Outputs
     new cdk.CfnOutput(this, 'ApiUrl', { value: this.api.url });

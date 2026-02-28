@@ -44,6 +44,10 @@ export const api = {
   /** Get single video metadata */
   getVideo: (videoId: string) => request<VideoRecord>(`videos/${videoId}`),
 
+  /** Record a view for a published video — fire-and-forget, returns updated viewCount */
+  recordView: (videoId: string) =>
+    request<{ viewCount: number }>(`videos/${videoId}/view`, { method: 'POST' }),
+
   /** Request a presigned upload URL (token = Cognito IdToken, no Bearer prefix) */
   createUpload: (title: string, contentType: string, token: string) =>
     request<{ videoId: string; uploadUrl: string; expiresIn: number }>('uploads', {

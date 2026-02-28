@@ -23,6 +23,7 @@ export function VideoPage() {
   const [quality, setQuality] = useState<'720p' | '360p'>('720p');
   const videoRef = useRef<HTMLVideoElement>(null);
   const pendingSeek = useRef<number | null>(null);
+  const viewRecorded = useRef(false);
 
   useEffect(() => {
     if (!videoId) return;
@@ -38,6 +39,14 @@ export function VideoPage() {
     if (!vid || q === quality) return;
     pendingSeek.current = vid.currentTime;
     setQuality(q);
+  };
+
+  const handlePlay = () => {
+    if (viewRecorded.current || !videoId) return;
+    viewRecorded.current = true;
+    api.recordView(videoId).then(({ viewCount }) => {
+      setVideo((v) => (v ? { ...v, viewCount } : v));
+    }).catch(() => {/* ignore — view count is non-critical */});
   };
 
   const handleCanPlay = () => {
@@ -94,6 +103,7 @@ export function VideoPage() {
           key={videoSrc}
           controls
           style={styles.video}
+          onPlay={handlePlay}
           onCanPlay={handleCanPlay}
         >
           <source src={videoSrc} type="video/mp4" />
