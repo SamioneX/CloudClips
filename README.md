@@ -562,5 +562,5 @@ bash scripts/teardown.sh
 ## Known Limitations / TODOs
 
 - **Email notifications**: `notify/handler.ts` logs the event but does not send SES emails yet (needs Cognito user email lookup).
-- **CORS**: Upload bucket `allowedOrigins` is `['*']` — tighten to your domain for production.
+- **CORS**: Upload bucket `allowedOrigins` is `['*']` — tighten in production.
 - **SES sandbox**: New accounts can only send to verified emails. Request production SES access to send to all users.
