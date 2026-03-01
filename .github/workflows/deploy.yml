@@ -38,6 +38,25 @@ jobs:
       - name: CDK deploy
         run: cd infra && npx cdk deploy --all --require-approval never
 
+      - name: Fetch frontend env vars from CloudFormation
+        run: |
+          echo "VITE_API_URL=$(aws cloudformation describe-stacks \
+            --stack-name CloudClips-Api \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
+            --output text)" >> $GITHUB_ENV
+          echo "VITE_USER_POOL_ID=$(aws cloudformation describe-stacks \
+            --stack-name CloudClips-Auth \
+            --query "Stacks[0].Outputs[?OutputKey=='UserPoolId'].OutputValue" \
+            --output text)" >> $GITHUB_ENV
+          echo "VITE_USER_POOL_CLIENT_ID=$(aws cloudformation describe-stacks \
+            --stack-name CloudClips-Auth \
+            --query "Stacks[0].Outputs[?OutputKey=='UserPoolClientId'].OutputValue" \
+            --output text)" >> $GITHUB_ENV
+          echo "VITE_VIDEO_CDN_URL=$(aws cloudformation describe-stacks \
+            --stack-name CloudClips-Cdn \
+            --query "Stacks[0].Outputs[?OutputKey=='VideoDistributionUrl'].OutputValue" \
+            --output text)" >> $GITHUB_ENV
+
       - name: Build frontend
         run: cd frontend && pnpm build
 
@@ -53,6 +72,6 @@ jobs:
         run: |
           DIST_ID=$(aws cloudformation describe-stacks \
             --stack-name CloudClips-Cdn \
-            --query "Stacks[0].Outputs[?contains(OutputKey,'FrontendDistribution')].OutputValue" \
+            --query "Stacks[0].Outputs[?OutputKey=='FrontendDistributionId'].OutputValue" \
             --output text)
           aws cloudfront create-invalidation --distribution-id "${DIST_ID}" --paths "/*"
